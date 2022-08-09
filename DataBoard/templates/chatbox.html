@@ -1,0 +1,111 @@
+<style>
+    .scroll {
+    max-height: 30vh;
+    overflow-y: auto;
+}
+</style>
+<div class="fixed-bottom container-fluid">
+    <div class="row">
+        <div class="col col-md-6 col-lg-5 col-xl-4 ms-auto me-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <span onclick="toggle_chat()">Datenassistent</span>
+                    <button class="btn btn-sm float-end" onclick="toggle_chat()"><span id='chat-toggle-button' class="bi-arrow-bar-up"></span></button>
+                    <button class="btn btn-sm float-end" onclick="location.reload()"><span id='chat-reset-button' class="bi-arrow-counterclockwise" hidden></span></button>
+                </div>
+                <div class="card-body scroll" id="chat-body" hidden>
+                    <div class="card bg-light p-1 mb-1">
+                        <div class="card-title">
+                            <span class="fw-bold">Datenassistent</span>
+                            <span class="fw-light">15:30</span>
+                        </div>
+                         <p>
+                            Hallo, ich unterstütze Sie bei der Datenanalyse. Fragen Sie mich gerne zu den vorliegenden Daten.
+                            Ich kann Ihnen beispielsweise folgende Fragen beantworten:
+                        </p>
+                        <button class="btn btn-sm btn-light border-dark mb-1" name="show_max_btn">Wo liegt der maximale Ausschlag?</button>
+                        <button class="btn btn-sm btn-light border-dark mb-1" name="show_local_max_btn">Welche lokalen Maxima gibt es?</button>
+                        <button class="btn btn-sm btn-light border-dark mb-1" name="show_interpretation_help_btn">Wie muss ich das Diagramm interpretieren?</button>
+                        <!--<button class="btn btn-sm btn-light border-dark mb-1" disabled>Was ist der Durchschnittswert?</button>-->
+                        <button class="btn btn-sm btn-light border-dark mb-1" name="reset_graph_btn">Setze den Graphen zurück</button>
+                    </div>
+                </div>
+                <div class="card-footer" id="chat-footer" hidden>
+                        <div class="row g-md-2">
+                            <div class="col-10">
+                                <input id="chat-input" type="text" class="form-control form-control-sm" placeholder="...">
+                            </div>
+                        <div class="col-1" >
+                            <button id="chat-send-button" class="btn btn-sm btn-primary" onclick="react_on_chat_send_event()"><div class="d-none d-lg-block">Senden</div><div class="bi-arrow-return-left d-lg-none"></div></button>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function toggle_chat() {
+        document.getElementById('chat-body').hidden = !document.getElementById('chat-body').hidden;
+        document.getElementById('chat-footer').hidden = !document.getElementById('chat-footer').hidden;
+        document.getElementById('chat-reset-button').hidden = !document.getElementById('chat-reset-button').hidden;
+        document.getElementById('chat-toggle-button').classList.toggle('bi-arrow-bar-up');
+        document.getElementById('chat-toggle-button').classList.toggle('bi-arrow-bar-down');
+    }
+
+    function print_message_to_chat(message_content, author, safe=false){
+        // avoid Injections
+        if (!safe){
+            let message_text = document.createElement('p',);
+            message_text.innerText = message_content;
+            message_content = message_text.outerHTML;
+        }
+        const chat = document.getElementById('chat-body');
+        // set background light, except author is user
+        let background_color = 'bg-light';
+        if (author === 'Sie'){background_color='bg-white'};
+
+        let message_template = `
+            <div class="card ${background_color} p-1 mb-1">
+                <div class="card-title">
+                     <span class="fw-bold">${author}</span>
+                     <span class="fw-light">${Date().slice(16,21)}</span>
+                </div>
+                <div class="message_content">${message_content}</div>
+            </div>`
+        let message = document.createElement('div')
+        message.innerHTML = message_template
+        chat.appendChild(message);
+    }
+
+    function react_on_chat_send_event(){
+        const input = document.getElementById('chat-input');
+        print_message_to_chat(input.value, 'Sie');
+        handle_chat_message(input.value)
+        input.value = null;
+    }
+
+    // React on Enter like on Send-Button
+    document.getElementById("chat-input").addEventListener("keypress", function(event) {
+      if (event.key === "Enter") {
+          event.preventDefault();
+          react_on_chat_send_event();}
+    });
+    document.getElementsByName('show_max_btn').forEach(el => {el.addEventListener('click', ev => {
+        print_message_to_chat('Wo liegt der maximale Ausschlag?', 'Sie')
+        handle_chat_message('Wo liegt der maximale Ausschlag?');
+    })});
+    document.getElementsByName('show_local_max_btn').forEach(el => {el.addEventListener('click', ev => {
+        print_message_to_chat('Welche lokalen Maxima gibt es?', 'Sie')
+        handle_chat_message('Welche lokalen Maxima gibt es?');
+    })});
+    document.getElementsByName('show_interpretation_help_btn').forEach(el => {el.addEventListener('click', ev => {
+        print_message_to_chat('Wie muss ich das Diagramm interpretieren?', 'Sie')
+        handle_chat_message('Wie muss ich das Diagramm interpretieren?');
+    })});
+    document.getElementsByName('reset_graph_btn').forEach(el => {el.addEventListener('click', ev => {
+        print_message_to_chat('Setze den Graphen zurück.', 'Sie');
+        handle_chat_message('Setze den Graphen zurück.');
+    })});
+</script>

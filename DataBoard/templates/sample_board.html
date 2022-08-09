@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Datenboard - Descript</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.0/chart.min.js" integrity="sha512-sW/w8s4RWTdFFSduOTGtk4isV1+190E/GghVffMA9XczdJ2MDzSzLEubKAs5h0wzgSJOQTRYyaz73L3d6RtJSg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js" integrity="sha512-HrwQrg8S/xLPE6Qwe7XOghA/FOxX+tuVF4TxbvS73/zKJSs/b1gVl/P4MsdfTFWYFYg/ISVNYIINcg35Xvr6QQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js" integrity="sha256-0H3Nuz3aug3afVbUlsu12Puxva3CP4EhJtPExqs54Vg=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+</head>
+<body class="bg-light">
+<!-- Sample Navbar -->
+    <nav class="navbar navbar-dark bg-secondary">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Datenboard - Descript</a>
+      </div>
+    </nav>
+<!-- Sample Chart -->
+    <div class="container bg-white pt-3">
+        <h1>EKG-Beispiel</h1>
+        <hr>
+        <div>
+            <canvas id="metric-chart"></canvas>
+        </div>
+        {% include 'chatbox.html' %}
+    </div>
+
+<!-- Draw Chart -->
+<script>
+    const chat_linked_chart_id = 'metric-chart';
+
+    function get_initial_chart(chart_id) {
+        // Implemented using Chart.js
+        fetch('http://localhost:8000/get_data/')
+            .then((response)=>response.json())
+            .then((response_body) => {
+                let series = response_body['data'];
+                let config = {
+                    type: 'line',
+                    data: {
+                        plugins: {title: 'Alt!'},
+                        labels: Object.keys(series),
+                        datasets: [{
+                            label: 'EKG',
+                            backgroundColor: 'rgb(245,38,38)',
+                            borderColor: 'rgb(253,1,48)',
+                            data: Object.values(series)}]},
+                    options: {animation:{duration:0}}
+                };
+                new Chart(document.getElementById(chart_id),config);})}
+
+    function reset_graph(chart_id) {
+        const chart = Chart.getChart(chart_id);
+        chart.destroy();
+        get_initial_chart(chart_id);
+    }
+
+    function highlight_points(chart_id,points) {
+        const chart = Chart.getChart(chart_id);
+        chart.data.datasets[0].backgroundColor = 'rgb(150,150,150)';
+        chart.data.datasets[0].borderColor = 'rgb(150,150,150)';
+        chart.data.datasets[0].data[4].backgroundColor = 'rgb(255,255,255)'
+        let points_adapted = []
+        for (let point of points){
+            points_adapted.push({
+                type:'point', xValue:point.x, yValue:point.y, backgroundColor: 'rgba(0,253,51,0.23)'}
+            )
+        }
+        chart.options.plugins.annotation = {annotations: points_adapted}
+        chart.update();
+    }
+
+    async function handle_chat_message(message) {
+        let formData = new FormData();
+        formData.append('msg', message);
+        // Interaction with bot_message_api from backend
+        let csrftoken = Cookies.get('csrftoken');
+        let response = await fetch( '/bot_message_api/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken},
+            body: formData
+            })
+        let response_body = await response.json();
+        // if response contains message, print to chat
+        if (response_body['msg']){
+            print_message_to_chat(response_body['msg'], 'Datenassistent', true)
+        }
+        // if response contains points, highlight in chart
+        if (response_body['points']){
+            highlight_points(chat_linked_chart_id, response_body['points'])
+        }
+        // if response contains command, handle command
+        if (response_body['cmd']){
+            if (response_body['cmd'] === 'reset_chart'){
+                reset_graph(chat_linked_chart_id)
+            }
+        }
+    }
+
+    get_initial_chart(chat_linked_chart_id);
+</script>
+</body>
+</html>
